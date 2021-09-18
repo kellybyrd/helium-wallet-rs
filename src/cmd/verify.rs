@@ -46,9 +46,7 @@ pub fn print_result(
                 let mut phrase_table = Table::new();
                 phrase_table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
                 for segment in phrase?.chunks(4) {
-                    phrase_table.add_row(Row::new(
-                        segment.into_iter().map(|s| Cell::new(s)).collect(),
-                    ));
+                    phrase_table.add_row(Row::new(segment.iter().map(|s| Cell::new(s)).collect()));
                 }
                 table.add_row(row!["Phrase", phrase_table]);
             }
