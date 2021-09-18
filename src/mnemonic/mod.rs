@@ -133,7 +133,7 @@ pub fn entropy_to_mnemonic(entropy: &[u8], seed_type: &SeedType) -> Result<Vec<S
     // For every 32-bits of entropy, add one bit of checksum to
     // the end of word_bits.
     let checksum = match seed_type {
-        SeedType::Bip39 => Sha256::digest(&working_entropy),
+        SeedType::Bip39 => Sha256::digest(working_entropy),
         SeedType::Mobile => GenericArray::clone_from_slice(&[0u8; 32]),
     };
 
