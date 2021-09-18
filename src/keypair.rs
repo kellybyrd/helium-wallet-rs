@@ -49,13 +49,9 @@ impl Keypair {
     /// Return the mnemonic phrase that can be used to recreate this Keypair.
     /// This function is implemented here to avoid passing the secret between
     /// too many modules.
-    pub fn phrase(&self, seed_type: Option<&SeedType>) -> Vec<String> {
-        if seed_type.is_none() {
-            return Vec::default();
-        }
-
+    pub fn phrase(&self, seed_type: &SeedType) -> Result<Vec<String>> {
         let entropy: Vec<u8> = self.0.to_bytes()[1..33].to_vec();
-        entropy_to_mnemonic(&entropy, seed_type.unwrap()).unwrap()
+        entropy_to_mnemonic(&entropy, seed_type)
     }
 }
 
