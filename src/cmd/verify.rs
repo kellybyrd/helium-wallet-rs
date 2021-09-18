@@ -1,5 +1,5 @@
 use crate::{cmd::*, keypair::Keypair, mnemonic::SeedType, result::Result, wallet::Wallet};
-use prettytable::{format, Table};
+use prettytable::{Cell, Row, Table};
 use serde_json::json;
 
 /// Verify an encypted wallet
@@ -21,38 +21,36 @@ impl Cmd {
 
 pub fn print_result(
     wallet: &Wallet,
-    decryped_wallet: &Result<Keypair>,
+    decrypted_wallet: &Result<Keypair>,
     seed_type: Option<&SeedType>,
     format: OutputFormat,
 ) -> Result {
     let address = wallet.address().unwrap_or_else(|_| "unknown".to_string());
-    let phrase = decryped_wallet
-        .as_ref()
-        .unwrap()
-        .phrase(seed_type)
-        .join(" ");
+    let phrase = seed_type.map(|seed_type| {
+        decrypted_wallet
+            .as_ref()
+            .map_or(Ok(vec![]), |decrypted_wallet| {
+                decrypted_wallet.phrase(seed_type)
+            })
+    });
 
     match format {
         OutputFormat::Table => {
             let mut table = Table::new();
-            table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
-            if seed_type.is_none() {
-                table.set_titles(row!["Address", "Sharded", "Verify", "PwHash"]);
-                table.add_row(row![
-                    address,
-                    wallet.is_sharded(),
-                    decryped_wallet.is_ok(),
-                    wallet.pwhash()
-                ]);
-            } else {
-                table.set_titles(row!["Address", "Sharded", "Verify", "PwHash", "Phrase"]);
-                table.add_row(row![
-                    address,
-                    wallet.is_sharded(),
-                    decryped_wallet.is_ok(),
-                    wallet.pwhash(),
-                    phrase
-                ]);
+            table.add_row(row!["Key", "Value"]);
+            table.add_row(row!["Address", address]);
+            table.add_row(row!["Sharded", wallet.is_sharded()]);
+            table.add_row(row!["Verify", decrypted_wallet.is_ok()]);
+            table.add_row(row!["PwHash", wallet.pwhash()]);
+            if let Some(phrase) = phrase {
+                let mut phrase_table = Table::new();
+                phrase_table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
+                for segment in phrase?.chunks(4) {
+                    phrase_table.add_row(Row::new(
+                        segment.into_iter().map(|s| Cell::new(s)).collect(),
+                    ));
+                }
+                table.add_row(row!["Phrase", phrase_table]);
             }
             print_table(&table)
         }
@@ -60,11 +58,11 @@ pub fn print_result(
             let mut table = json!({
                 "address": address,
                 "sharded": wallet.is_sharded(),
-                "verify": decryped_wallet.is_ok(),
+                "verify": decrypted_wallet.is_ok(),
                 "pwhash": wallet.pwhash().to_string()
             });
-            if seed_type.is_some() {
-                table["phrase"] = serde_json::Value::String(phrase);
+            if let Some(phrase) = phrase {
+                table["phrase"] = serde_json::Value::String(phrase?.join(" "));
             }
             print_json(&table)
         }
